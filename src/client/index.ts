@@ -24,7 +24,7 @@ async function main() {
   );
 
   const username = await clientWelcome();
-  const queueBinded = declareAndBindQueue(
+  await declareAndBindQueue(
     conn, 
     ExchangePerilDirect, 
     `pause.${username}`, 

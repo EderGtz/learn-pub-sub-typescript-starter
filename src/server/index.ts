@@ -3,6 +3,7 @@ import { env, exit } from 'node:process';
 import { publishJSON } from "../internal/pubsub/publish.js";
 import { ExchangePerilDirect, PauseKey } from "../internal/routing/routing.js";
 import type { PlayingState } from "../internal/gamelogic/gamestate.js";
+import { getInput, printServerHelp } from "../internal/gamelogic/gamelogic.js";
 
 async function main() {
   console.log("Starting Peril server...");
@@ -12,7 +13,6 @@ async function main() {
 
   const rabbitChannel = await conn.createConfirmChannel();
   const value: PlayingState = { isPaused: true };
-  publishJSON(rabbitChannel, ExchangePerilDirect, PauseKey, value);
 
   ["SIGINT", "SIGTERM"].forEach((signal) =>
     process.on(signal, async () => {
@@ -26,6 +26,41 @@ async function main() {
       }
     }),
   );
+
+    printServerHelp();
+
+  while (true) {
+      const option = await getInput();
+      if (option.length === 0) continue;
+      let gameState: PlayingState = { isPaused: false };
+
+      switch (option[0]) {
+        case "pause":
+          console.log("Pausing the game");
+          gameState.isPaused = true;
+          try {
+            publishJSON(rabbitChannel, ExchangePerilDirect, PauseKey, gameState);
+          } catch (err) {
+            console.error("Error publishing pause message:", err);
+          };
+          break;
+        case "resume":
+          console.log("Resuming the game");
+          gameState.isPaused = false;
+          try {
+            publishJSON( rabbitChannel, ExchangePerilDirect, PauseKey, gameState);
+          } catch (err) {
+            console.error("Error publishing resume message:", err);
+          };
+          
+          break;
+        case "quit":
+          console.log("Exiting the game");
+          process.exit(0);
+        default:
+          console.log("Unknown command.")
+      }  
+  }
 }
 
 main().catch((err) => {
